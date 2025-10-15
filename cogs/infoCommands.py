@@ -162,27 +162,33 @@ class InfoCommands(commands.Cog):
             return None
 
     async def generate_profile_image(self, uid: str) -> Optional[io.BytesIO]:
-        """Generate profile image from profile API"""
+        """Generate profile image from profile API with fallback"""
         try:
             async with self.session.get(f"{self.profile_api_url}?uid={uid}") as response:
                 if response.status == 200:
-                    image_data = await response.read()
-                    return io.BytesIO(image_data)
+                    content_type = response.headers.get('Content-Type', '')
+                    if 'image' in content_type:
+                        image_data = await response.read()
+                        if len(image_data) > 1000:  # Basic validation - ensure it's a real image
+                            return io.BytesIO(image_data)
                 return None
         except Exception as e:
-            logger.error(f"Error generating profile image: {e}")
+            logger.warning(f"Profile image generation failed: {e}")
             return None
 
     async def generate_profile_card(self, uid: str) -> Optional[io.BytesIO]:
-        """Generate profile card from profile card API"""
+        """Generate profile card from profile card API with fallback"""
         try:
             async with self.session.get(f"{self.profile_card_api_url}?uid={uid}") as response:
                 if response.status == 200:
-                    image_data = await response.read()
-                    return io.BytesIO(image_data)
+                    content_type = response.headers.get('Content-Type', '')
+                    if 'image' in content_type:
+                        image_data = await response.read()
+                        if len(image_data) > 1000:  # Basic validation
+                            return io.BytesIO(image_data)
                 return None
         except Exception as e:
-            logger.error(f"Error generating profile card: {e}")
+            logger.warning(f"Profile card generation failed: {e}")
             return None
 
     def create_player_embed(self, data: dict, uid: str, ctx) -> discord.Embed:
@@ -247,7 +253,7 @@ class InfoCommands(commands.Cog):
         )
         
         # Pet Information
-        if pet_info:
+        if pet_info and pet_info.get('name'):
             embed.add_field(
                 name="🐾 Pet Details",
                 value=(
@@ -260,7 +266,7 @@ class InfoCommands(commands.Cog):
             )
         
         # Guild Information
-        if clan_info:
+        if clan_info and clan_info.get('clanName'):
             guild_value = (
                 f"**Name:** {clan_info.get('clanName', 'N/A')}\n"
                 f"**ID:** `{clan_info.get('clanId', 'N/A')}`\n"
@@ -268,7 +274,7 @@ class InfoCommands(commands.Cog):
                 f"**Members:** {clan_info.get('memberNum', 'N/A')}/{clan_info.get('capacity', 'N/A')}"
             )
             
-            if captain_info:
+            if captain_info and captain_info.get('nickname'):
                 guild_value += f"\n**Leader:** {captain_info.get('nickname', 'N/A')}"
                 
             embed.add_field(
@@ -377,20 +383,44 @@ class InfoCommands(commands.Cog):
             embed = self.create_player_embed(player_data, uid, ctx)
             await loading_message.edit(embed=embed)
             
-            # Generate and send profile images
+            # Generate and send profile images (with error handling)
             global_settings = self.config_data["global_settings"]
+            images_sent = 0
             
             if global_settings.get("show_profile_image", True):
-                profile_image = await self.generate_profile_image(uid)
-                if profile_image:
-                    file = discord.File(profile_image, filename=f"profile_{uid}_{uuid.uuid4().hex[:8]}.png")
-                    await ctx.send(file=file)
+                try:
+                    profile_image = await self.generate_profile_image(uid)
+                    if profile_image:
+                        file = discord.File(profile_image, filename=f"profile_{uid}_{uuid.uuid4().hex[:8]}.png")
+                        await ctx.send(file=file)
+                        images_sent += 1
+                        logger.info(f"Profile image sent for UID {uid}")
+                    else:
+                        logger.warning(f"Profile image generation failed for UID {uid}")
+                except Exception as e:
+                    logger.error(f"Error sending profile image: {e}")
             
             if global_settings.get("show_profile_card", True):
-                profile_card = await self.generate_profile_card(uid)
-                if profile_card:
-                    file = discord.File(profile_card, filename=f"card_{uid}_{uuid.uuid4().hex[:8]}.png")
-                    await ctx.send(file=file)
+                try:
+                    profile_card = await self.generate_profile_card(uid)
+                    if profile_card:
+                        file = discord.File(profile_card, filename=f"card_{uid}_{uuid.uuid4().hex[:8]}.png")
+                        await ctx.send(file=file)
+                        images_sent += 1
+                        logger.info(f"Profile card sent for UID {uid}")
+                    else:
+                        logger.warning(f"Profile card generation failed for UID {uid}")
+                except Exception as e:
+                    logger.error(f"Error sending profile card: {e}")
+            
+            # If no images were sent, add a note
+            if images_sent == 0:
+                note_embed = discord.Embed(
+                    title="ℹ️ Image Generation",
+                    description="Profile images are currently unavailable. The data above is still accurate.",
+                    color=0xF39C12
+                )
+                await ctx.send(embed=note_embed)
                     
         except Exception as e:
             logger.error(f"Error in player_info command: {e}")
@@ -535,80 +565,25 @@ class InfoCommands(commands.Cog):
         
         await ctx.send(embed=embed)
 
-    @commands.hybrid_command(name="infoconfig", description="Configure bot settings (Admin only)")
+    @commands.hybrid_command(name="toggleimages", description="Toggle profile images on/off")
     @commands.has_permissions(administrator=True)
-    @app_commands.describe(
-        cooldown="Cooldown in seconds between commands",
-        daily_limit="Daily request limit per user",
-        embed_color="Embed color in hex (e.g., 5865F2)"
-    )
-    async def config_bot(self, ctx: commands.Context, 
-                        cooldown: int = None, 
-                        daily_limit: int = None,
-                        embed_color: str = None):
-        """Configure bot settings"""
-        guild_id = str(ctx.guild.id)
+    async def toggle_images(self, ctx: commands.Context):
+        """Toggle image generation"""
+        current_setting = self.config_data["global_settings"].get("show_profile_image", True)
+        new_setting = not current_setting
         
-        # Ensure server config exists
-        if guild_id not in self.config_data["servers"]:
-            self.config_data["servers"][guild_id] = {"info_channels": [], "config": {}}
+        self.config_data["global_settings"]["show_profile_image"] = new_setting
+        self.config_data["global_settings"]["show_profile_card"] = new_setting
+        self.save_config()
         
-        config = self.config_data["servers"][guild_id]["config"]
-        changes = []
+        status = "✅ **ENABLED**" if new_setting else "❌ **DISABLED**"
+        embed = discord.Embed(
+            title="🖼️ Image Generation",
+            description=f"Profile image generation has been {status}",
+            color=0x2ECC71 if new_setting else 0xE74C3C
+        )
         
-        # Update cooldown
-        if cooldown is not None:
-            if 5 <= cooldown <= 3600:  # 5 seconds to 1 hour
-                config["cooldown"] = cooldown
-                changes.append(f"**Cooldown:** {cooldown}s")
-            else:
-                await ctx.send("❌ Cooldown must be between 5 and 3600 seconds.", ephemeral=True)
-                return
-        
-        # Update daily limit
-        if daily_limit is not None:
-            if 1 <= daily_limit <= 1000:  # 1 to 1000 requests
-                config["daily_limit"] = daily_limit
-                changes.append(f"**Daily Limit:** {daily_limit} requests")
-            else:
-                await ctx.send("❌ Daily limit must be between 1 and 1000.", ephemeral=True)
-                return
-        
-        # Update embed color
-        if embed_color is not None:
-            try:
-                # Remove # if present and convert to int
-                color = int(embed_color.replace('#', ''), 16)
-                config["embed_color"] = color
-                changes.append(f"**Embed Color:** `#{embed_color.replace('#', '')}`")
-            except ValueError:
-                await ctx.send("❌ Invalid color format. Use hex like `5865F2` or `#5865F2`.", ephemeral=True)
-                return
-        
-        if changes:
-            self.save_config()
-            embed = discord.Embed(
-                title="✅ Configuration Updated",
-                description="\n".join(changes),
-                color=0x2ECC71
-            )
-            await ctx.send(embed=embed)
-        else:
-            embed = discord.Embed(
-                title="⚙️ Current Configuration",
-                color=0x3498DB
-            )
-            
-            current_cooldown = config.get("cooldown", self.config_data["global_settings"]["default_cooldown"])
-            current_daily_limit = config.get("daily_limit", self.config_data["global_settings"]["default_daily_limit"])
-            current_color = config.get("embed_color", self.config_data["global_settings"]["embed_color"])
-            
-            embed.add_field(name="Cooldown", value=f"{current_cooldown}s", inline=True)
-            embed.add_field(name="Daily Limit", value=f"{current_daily_limit} requests", inline=True)
-            embed.add_field(name="Embed Color", value=f"`#{hex(current_color)[2:].upper()}`", inline=True)
-            
-            embed.set_footer(text="Use /infoconfig <cooldown> <daily_limit> <embed_color> to change settings")
-            await ctx.send(embed=embed)
+        await ctx.send(embed=embed)
 
     async def cog_unload(self):
         """Cleanup when cog is unloaded"""
