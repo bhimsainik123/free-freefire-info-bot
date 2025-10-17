@@ -18,7 +18,7 @@ class InfoCommands(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.api_url = "http://raw.thug4ff.com/info"
-        self.generate_url = "http://profile.thug4ff.com/api/profile"
+        self.generate_url = "https://profile.thug4ff.com/api/profile"
         self.session = aiohttp.ClientSession()
         self.config_data = self.load_config()
         self.cooldowns = {}
@@ -96,9 +96,9 @@ class InfoCommands(commands.Cog):
         if str(channel.id) not in self.config_data["servers"][guild_id]["info_channels"]:
             self.config_data["servers"][guild_id]["info_channels"].append(str(channel.id))
             self.save_config()
-            await ctx.send(f"✅ {channel.mention} is now allowed for `!info` commands")
+            await ctx.send(f"<a:tickkk:1425921741859065888> {channel.mention} is now allowed for `!info` commands")
         else:
-            await ctx.send(f"ℹ️ {channel.mention} is already allowed for `!info` commands")
+            await ctx.send(f"<a:info:1428004794542329988> {channel.mention} is already allowed for `!info` commands")
 
     @commands.hybrid_command(name="removeinfochannel", description="Remove a channel from !info commands")
     @commands.has_permissions(administrator=True)
@@ -108,11 +108,11 @@ class InfoCommands(commands.Cog):
             if str(channel.id) in self.config_data["servers"][guild_id]["info_channels"]:
                 self.config_data["servers"][guild_id]["info_channels"].remove(str(channel.id))
                 self.save_config()
-                await ctx.send(f"✅ {channel.mention} has been removed from allowed channels")
+                await ctx.send(f"<a:tickkk:1425921741859065888> {channel.mention} has been removed from allowed channels")
             else:
-                await ctx.send(f"❌ {channel.mention} is not in the list of allowed channels")
+                await ctx.send(f"<a:Cross:1115898865460203551> {channel.mention} is not in the list of allowed channels")
         else:
-            await ctx.send("ℹ️ This server has no saved configuration")
+            await ctx.send("<a:info:1428004794542329988> This server has no saved configuration")
 
     @commands.hybrid_command(name="infochannels", description="List allowed channels")
     async def list_info_channels(self, ctx: commands.Context):
@@ -257,7 +257,7 @@ class InfoCommands(commands.Cog):
 
 
 
-            embed.set_footer(text="DEVELOPED BY THUG")
+            embed.set_footer(text="DEVELOPED BY SUMEDH")
             await ctx.send(embed=embed)
 
             if region and uid:
@@ -269,7 +269,7 @@ class InfoCommands(commands.Cog):
                             if img_file.status == 200:
                                 with io.BytesIO(await img_file.read()) as buf:
                                     file = discord.File(buf, filename=f"outfit_{uuid.uuid4().hex[:8]}.png")
-                                    await ctx.send(file=file)  # ✅ ENVOYER L'IMAGE
+                                    await ctx.send(file=file)  # <a:tickkk:1425921741859065888> ENVOYER L'IMAGE
                                     print("Image envoyée avec succès")
                             else:
                                 print(f"Erreur HTTP: {img_file.status}")
@@ -287,10 +287,10 @@ class InfoCommands(commands.Cog):
 
     async def _send_player_not_found(self, ctx, uid):
         embed = discord.Embed(
-            title="❌ Player Not Found",
+            title="<a:Cross:1115898865460203551> Player Not Found",
             description=(
                 f"UID `{uid}` not found or inaccessible.\n\n"
-                "⚠️ **Note:** IND servers are currently not working."
+                "<a:warningg:1428005394189516891> **Note:** IND servers are currently not working."
             ),
             color=0xE74C3C
         )
@@ -303,7 +303,7 @@ class InfoCommands(commands.Cog):
 
     async def _send_api_error(self, ctx):
         await ctx.send(embed=discord.Embed(
-            title="⚠️ API Error",
+            title="<a:warningg:1428005394189516891> API Error",
             description="The Free Fire API is not responding. Try again later.",
             color=0xF39C12
         ))
