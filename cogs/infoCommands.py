@@ -228,14 +228,6 @@ class InfoCommands(commands.Cog):
                 timestamp=datetime.now()
             )
 
-            # Set profile card as main image if available
-            if profile_card_image:
-                with io.BytesIO(profile_card_image) as buf:
-                    file = discord.File(buf, filename=f"profile_card_{uuid.uuid4().hex[:8]}.png")
-                    embed.set_image(url=f"attachment://{file.filename}")
-            else:
-                embed.set_thumbnail(url=ctx.author.display_avatar.url)
-
             # Basic Info Section
             embed.add_field(name="", value="\n".join([
                 f"**┌ {self.EMOJIS['server']} ACCOUNT BASIC INFO**",
@@ -302,13 +294,21 @@ class InfoCommands(commands.Cog):
 
             embed.set_footer(text="DEVELOPED BY SUMEDH")
 
-            # Send embed with profile card image
+            # Send embed with profile card as main image
             if profile_card_image:
+                # Create file object
                 with io.BytesIO(profile_card_image) as buf:
-                    file = discord.File(buf, filename=f"profile_card_{uuid.uuid4().hex[:8]}.png")
+                    file = discord.File(buf, filename="profile_card.png")
+                    # Set the image in the embed
+                    embed.set_image(url=f"attachment://{file.filename}")
+                    # Send embed with file
                     await ctx.send(embed=embed, file=file)
+                    print(f"{self.EMOJIS['success']} Embed sent with profile card as main image")
             else:
+                # Fallback if no profile card image
+                embed.set_thumbnail(url=ctx.author.display_avatar.url)
                 await ctx.send(embed=embed)
+                print(f"{self.EMOJIS['warning']} Profile card not available, sent embed without image")
 
             # Send additional profile outfit image if available
             if region and uid:
