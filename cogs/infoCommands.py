@@ -19,6 +19,7 @@ class InfoCommands(commands.Cog):
         self.bot = bot
         self.api_url = "http://raw.thug4ff.com/info"
         self.generate_url = "https://profile.thug4ff.com/api/profile"
+        self.profile_card_url = "https://profile.thug4ff.com/api/profile_card"
         self.session = aiohttp.ClientSession()
         self.config_data = self.load_config()
         self.cooldowns = {}
@@ -279,23 +280,51 @@ class InfoCommands(commands.Cog):
                     ])
                 embed.add_field(name="", value="\n".join(guild_info), inline=False)
 
-            embed.set_footer(text=f"{self.EMOJIS['null']} DEVELOPED BY SUMEDH")
+            embed.set_footer(text=f"{self.EMOJIS['developer']} DEVELOPED BY SUMEDH")
             await ctx.send(embed=embed)
 
-            # Generate and send profile image
+            # Generate and send both profile images
             if region and uid:
                 try:
+                    # First image: Profile outfit
                     image_url = f"{self.generate_url}?uid={uid}"
-                    print(f"Image URL = {image_url}")
+                    print(f"Profile Image URL = {image_url}")
+                    
+                    # Second image: Profile card
+                    profile_card_url = f"{self.profile_card_url}?uid={uid}"
+                    print(f"Profile Card URL = {profile_card_url}")
+
+                    # Send both images
+                    image_sent = False
+                    card_sent = False
+
+                    # Send profile outfit image
                     if image_url:
                         async with self.session.get(image_url) as img_file:
                             if img_file.status == 200:
                                 with io.BytesIO(await img_file.read()) as buf:
                                     file = discord.File(buf, filename=f"outfit_{uuid.uuid4().hex[:8]}.png")
                                     await ctx.send(file=file)
-                                    print(f"{self.EMOJIS['success']} Image sent successfully")
+                                    image_sent = True
+                                    print(f"{self.EMOJIS['success']} Profile outfit image sent successfully")
                             else:
-                                print(f"{self.EMOJIS['error']} HTTP Error: {img_file.status}")
+                                print(f"{self.EMOJIS['error']} Profile image HTTP Error: {img_file.status}")
+
+                    # Send profile card image
+                    if profile_card_url:
+                        async with self.session.get(profile_card_url) as card_file:
+                            if card_file.status == 200:
+                                with io.BytesIO(await card_file.read()) as buf:
+                                    file = discord.File(buf, filename=f"profile_card_{uuid.uuid4().hex[:8]}.png")
+                                    await ctx.send(file=file)
+                                    card_sent = True
+                                    print(f"{self.EMOJIS['success']} Profile card image sent successfully")
+                            else:
+                                print(f"{self.EMOJIS['error']} Profile card HTTP Error: {card_file.status}")
+
+                    if not image_sent and not card_sent:
+                        print(f"{self.EMOJIS['warning']} Both image generation failed")
+
                 except Exception as e:
                     print(f"{self.EMOJIS['error']} Image generation failed: {e}")
 
@@ -331,4 +360,4 @@ class InfoCommands(commands.Cog):
         ))
 
 async def setup(bot):
-    await bot.add_cog(InfoCommands(bot))
+    await bot.add_cog(InfoCommands(bot)) 
