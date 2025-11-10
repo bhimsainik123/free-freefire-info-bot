@@ -279,7 +279,7 @@ class InfoCommands(commands.Cog):
                     ])
                 embed.add_field(name="", value="\n".join(guild_info), inline=False)
 
-            embed.set_footer(text=f"{self.EMOJIS['developer']} DEVELOPED BY SUMEDH")
+            embed.set_footer(text=f"{self.EMOJIS['null']} DEVELOPED BY SUMEDH")
             await ctx.send(embed=embed)
 
             # Generate and send profile image
