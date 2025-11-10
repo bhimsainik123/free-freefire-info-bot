@@ -34,7 +34,7 @@ class InfoCommands(commands.Cog):
         "crown": "<a:Crown:1156196421905678356>",
         "server": "<a:server:1426187760968012008>",
         "verify": "<a:verify:1426189197282377749>",
-        "developer": "<a:developers:1426863340642373724>",
+        "developer": "<a:developers:1437474706436526110>",
         "music": "<a:Musicz:1425914953059139645>",
         "planet": "<a:planetz:1425921073794519041>",
         "friends": "<a:friends:1426860993874624597>",
