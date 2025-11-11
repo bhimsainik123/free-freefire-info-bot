@@ -19,7 +19,7 @@ class InfoCommands(commands.Cog):
         self.bot = bot
         self.api_url = "http://raw.thug4ff.com/info"
         self.generate_url = "https://profile.thug4ff.com/api/profile"
-        self.profile_card_url = "https://profile.thug4ff.com/api/profile_card"
+        self.profile_card_url = "https://profile-card-xi-henna.vercel.app/api/profile"
         self.session = aiohttp.ClientSession()
         self.config_data = self.load_config()
         self.cooldowns = {}
