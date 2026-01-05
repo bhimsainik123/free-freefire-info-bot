@@ -17,7 +17,7 @@ CONFIG_FILE = "info_channels.json"
 class InfoCommands(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.api_url = "http://raw.thug4ff.com/info"
+        self.api_url = "https://info.khushi.qzz.io/info"
         self.generate_url = "https://profile.thug4ff.com/api/profile"
         self.profile_card_url = "https://profile-card-xi-henna.vercel.app/api/profile"
         self.session = aiohttp.ClientSession()
